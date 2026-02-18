@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+/* Isso substitui as três linhas de @tailwind base, components, etc */
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+}
