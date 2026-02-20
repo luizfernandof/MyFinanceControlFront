@@ -1,14 +1,23 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import api from '../services/api';
-import BaseInput from '../components/BaseInput.vue'; // Importando a base do seu novo padrão
+import BaseInput from '../components/BaseInput.vue';
 
 // --- ESTADOS ---
+const now = new Date();
+const selectedMonth = ref(now.getMonth() + 1);
+const selectedYear = ref(now.getFullYear());
+
+// Estados de Paginação
+const currentPage = ref(0);
+const totalPages = ref(0);
+const pageSize = ref(10);
+
 const transactions = ref([]);
 const categories = ref([]);
 const loading = ref(false);
 const apiErrorMessage = ref('');
-const errors = ref({}); // Estado para validações manuais
+const errors = ref({});
 
 const showFormModal = ref(false);
 const showDeleteModal = ref(false);
@@ -21,10 +30,22 @@ const transactionForm = ref({
     amount: 0,
     date: new Date().toISOString().split('T')[0],
     type: 'EXPENSE',
-    categoryId: ''
+    categoryId: '',
+    installments: 1
 });
 
-// --- VALIDAÇÃO MANUAL ---
+const months = [
+  { value: 1, label: 'Janeiro' }, { value: 2, label: 'Fevereiro' },
+  { value: 3, label: 'Março' }, { value: 4, label: 'Abril' },
+  { value: 5, label: 'Maio' }, { value: 6, label: 'Junho' },
+  { value: 7, label: 'Julho' }, { value: 8, label: 'Agosto' },
+  { value: 9, label: 'Setembro' }, { value: 10, label: 'Outubro' },
+  { value: 11, label: 'Novembro' }, { value: 12, label: 'Dezembro' }
+];
+
+const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i);
+
+// --- VALIDAÇÃO ---
 function validateForm() {
     errors.value = {};
     let isValid = true;
@@ -45,6 +66,10 @@ function validateForm() {
         errors.value.categoryId = 'Selecione uma categoria.';
         isValid = false;
     }
+    if (transactionForm.value.installments < 1) {
+        errors.value.installments = 'Mínimo 1 parcela.';
+        isValid = false;
+    }
 
     return isValid;
 }
@@ -53,11 +78,22 @@ function validateForm() {
 async function fetchData() {
     loading.value = true;
     try {
+        const params = {
+            month: selectedMonth.value,
+            year: selectedYear.value,
+            page: currentPage.value,
+            size: pageSize.value,
+            sort: 'date,desc' // Ordenação padrão do backend
+        };
+
         const [resTrans, resCats] = await Promise.all([
-            api.get('/transactions'),
+            api.get('/transactions', { params }),
             api.get('/categories')
         ]);
-        transactions.value = resTrans.data;
+
+        // ATENÇÃO: Agora os dados estão em .content devido à paginação do Spring
+        transactions.value = resTrans.data.content;
+        totalPages.value = resTrans.data.totalPages;
         categories.value = resCats.data;
     } catch (error) {
         showError(error);
@@ -65,6 +101,12 @@ async function fetchData() {
         loading.value = false;
     }
 }
+
+// Observar mudanças de mês/ano para resetar a página e recarregar
+watch([selectedMonth, selectedYear], () => {
+    currentPage.value = 0;
+    fetchData();
+});
 
 // --- SALVAR ---
 async function saveTransaction() {
@@ -104,6 +146,14 @@ async function confirmDelete() {
     }
 }
 
+// --- NAVEGAÇÃO ---
+function changePage(page) {
+    if (page >= 0 && page < totalPages.value) {
+        currentPage.value = page;
+        fetchData();
+    }
+}
+
 // --- AUXILIARES ---
 function openCreateModal() {
     resetForm();
@@ -119,7 +169,8 @@ function prepareEdit(trans) {
         amount: trans.amount,
         date: trans.date,
         type: trans.type,
-        categoryId: categories.value.find(c => c.name === trans.categoryName)?.id || ''
+        categoryId: categories.value.find(c => c.name === trans.categoryName)?.id || '',
+        installments: 1
     };
     showFormModal.value = true;
 }
@@ -131,7 +182,8 @@ function resetForm() {
         amount: 0,
         date: new Date().toISOString().split('T')[0],
         type: 'EXPENSE',
-        categoryId: ''
+        categoryId: '',
+        installments: 1
     };
     isEditing.value = false;
     apiErrorMessage.value = '';
@@ -150,12 +202,25 @@ onMounted(fetchData);
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
             <div>
                 <h2 class="text-2xl font-black text-slate-800 tracking-tight">Transações</h2>
-                <p class="text-slate-400 text-sm font-medium">Gerencie seu fluxo financeiro</p>
+                <p class="text-slate-400 text-sm font-medium italic">Listando: {{ months[selectedMonth-1].label }} / {{ selectedYear }}</p>
             </div>
-            <button @click="openCreateModal" 
-                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-blue-200 transition-all transform active:scale-95">
-                + Novo Lançamento
-            </button>
+
+            <div class="flex items-center gap-4">
+                <div class="flex gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-100 items-center">
+                    <select v-model="selectedMonth" class="bg-transparent text-slate-600 text-xs font-bold px-2 py-1 outline-none cursor-pointer">
+                        <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
+                    </select>
+                    <div class="w-px bg-slate-200 h-4"></div>
+                    <select v-model="selectedYear" class="bg-transparent text-slate-600 text-xs font-bold px-2 py-1 outline-none cursor-pointer">
+                        <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+                    </select>
+                </div>
+
+                <button @click="openCreateModal" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-blue-200 transition-all transform active:scale-95 text-sm">
+                    + Novo Lançamento
+                </button>
+            </div>
         </div>
 
         <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
@@ -166,13 +231,13 @@ onMounted(fetchData);
                             <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Data</th>
                             <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Descrição</th>
                             <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Categoria</th>
-                            <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Valor</th>
+                            <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-right">Valor</th>
                             <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-right">Ações</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-50">
+                    <tbody v-if="transactions.length > 0" class="divide-y divide-slate-50">
                         <tr v-for="t in transactions" :key="t.id" class="hover:bg-slate-50/80 transition-colors group">
-                            <td class="px-6 py-4 text-sm font-medium text-slate-500">
+                            <td class="px-6 py-4 text-xs font-medium text-slate-400">
                                 {{ new Date(t.date).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) }}
                             </td>
                             <td class="px-6 py-4 text-sm font-bold text-slate-700">
@@ -183,9 +248,9 @@ onMounted(fetchData);
                                     {{ t.categoryName }}
                                 </span>
                             </td>
-                            <td class="px-6 py-4 text-sm font-black tracking-tight" 
+                            <td class="px-6 py-4 text-sm font-black tracking-tight text-right" 
                                 :class="t.type === 'INCOME' ? 'text-emerald-500' : 'text-rose-500'">
-                                {{ t.type === 'INCOME' ? '+' : '-' }} R$ {{ t.amount.toFixed(2) }}
+                                {{ t.type === 'INCOME' ? '+' : '-' }} R$ {{ (t.amount || 0).toFixed(2) }}
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <button @click="prepareEdit(t)" class="text-slate-300 hover:text-blue-600 font-black text-[10px] mr-4 transition-colors uppercase">Editar</button>
@@ -193,7 +258,36 @@ onMounted(fetchData);
                             </td>
                         </tr>
                     </tbody>
+                    <tbody v-else>
+                        <tr>
+                            <td colspan="5" class="p-20 text-center text-slate-300 italic text-sm">
+                                Nenhuma transação encontrada para este período.
+                            </td>
+                        </tr>
+                    </tbody>
                 </table>
+            </div>
+
+            <div v-if="totalPages > 1" class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Página {{ currentPage + 1 }} de {{ totalPages }}
+                </span>
+                <div class="flex gap-2">
+                    <button 
+                        @click="changePage(currentPage - 1)" 
+                        :disabled="currentPage === 0"
+                        class="px-4 py-2 text-[10px] font-black bg-white border border-slate-200 rounded-xl disabled:opacity-30 hover:bg-slate-50 transition-colors uppercase"
+                    >
+                        Anterior
+                    </button>
+                    <button 
+                        @click="changePage(currentPage + 1)" 
+                        :disabled="currentPage === totalPages - 1"
+                        class="px-4 py-2 text-[10px] font-black bg-white border border-slate-200 rounded-xl disabled:opacity-30 hover:bg-slate-50 transition-colors uppercase"
+                    >
+                        Próximo
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -223,7 +317,7 @@ onMounted(fetchData);
 
                     <div class="grid grid-cols-2 gap-4">
                         <BaseInput 
-                            label="Valor"
+                            label="Valor Total"
                             type="number"
                             v-model="transactionForm.amount"
                             :error="errors.amount"
@@ -255,6 +349,16 @@ onMounted(fetchData);
                             </select>
                             <p v-if="errors.categoryId" class="text-rose-500 text-[11px] font-bold mt-1 ml-2">{{ errors.categoryId }}</p>
                         </div>
+                    </div>
+
+                    <div v-if="!isEditing && transactionForm.type === 'EXPENSE'">
+                        <BaseInput 
+                            label="Nº de Parcelas"
+                            type="number"
+                            v-model="transactionForm.installments"
+                            placeholder="Ex: 12"
+                            :error="errors.installments"
+                        />
                     </div>
 
                     <div class="flex gap-3 pt-6 border-t border-slate-50 mt-4">
