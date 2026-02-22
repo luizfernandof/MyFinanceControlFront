@@ -24,7 +24,7 @@ const closeMenu = () => {
         
         <div class="flex items-center">
           <router-link to="/dashboard" class="text-white font-black text-2xl tracking-tighter mr-8">
-            MFC
+            My Finance Control
           </router-link>
           
           <div class="hidden md:flex space-x-2">

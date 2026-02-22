@@ -10,8 +10,10 @@ const showNavbar = computed(() => route.path !== '/');
 </script>
 
 <template>
-  <div>
+  <div class="min-h-screen">
     <Navbar v-if="showNavbar" />
-    <router-view />
+    <main class="w-full">
+      <router-view />
+    </main>
   </div>
 </template>
