@@ -2,7 +2,10 @@ import axios from 'axios';
 import router from '../router';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8080',
+  baseURL: 'https://api.mfc.devl.com.br',
+  headers: {
+    'Content-Type': 'application/json'
+  }
 });
 
 // Variáveis de controle para a "Fila de Espera"
@@ -59,7 +62,7 @@ api.interceptors.response.use(
         const refreshToken = localStorage.getItem('refreshToken');
 
         // Usamos o axios puro (sem interceptors) para buscar o novo token
-        axios.post('http://localhost:8080/auth/refresh', { refreshToken })
+        axios.post('https://api.mfc.devl.com.br/auth/refresh', { refreshToken })
           .then(({ data }) => {
             // 1. Salva os novos dados
             localStorage.setItem('accessToken', data.accessToken);

@@ -1,9 +1,24 @@
 @import "tailwindcss";
 
-/* Isso substitui as três linhas de @tailwind base, components, etc */
-
 @layer base {
+  :root {
+    font-family: 'Poppins', system-ui, sans-serif;
+  }
+  
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-slate-50 text-slate-900 antialiased m-0 min-h-screen;
+    overflow-x: hidden; 
+  }
+
+  #app {
+    @apply w-full;
+  }
+}
+
+@layer components {
+  @media (max-width: 640px) {
+    :root {
+      font-size: 13px; 
+    }
   }
 }

@@ -2,17 +2,18 @@
 import { ref, onMounted, watch, computed, nextTick } from 'vue';
 import api from '../services/api';
 import DoughnutChart from '../components/DoughnutChart.vue';
+import { useBreakpoint } from '../composables/useBreakpoint';
 
+const { isMobile } = useBreakpoint();
 const now = new Date();
 const selectedMonth = ref(now.getMonth() + 1);
 const selectedYear = ref(now.getFullYear());
 const loading = ref(false);
-const chartKey = ref(0); // Para forçar o refresh do componente filho
+const chartKey = ref(0);
 
 const summary = ref({ totalIncome: 0, totalExpense: 0, balance: 0 });
 const expensesByCategory = ref([]);
 
-// Prepara os dados para o componente filho (Sincronizado com o Java DTO 'total')
 const chartData = computed(() => {
   return {
     labels: expensesByCategory.value.map(c => c.category),
@@ -37,7 +38,6 @@ async function fetchData() {
     summary.value = resSummary.data;
     expensesByCategory.value = resExpenses.data || [];
     
-    // Incrementa a key para garantir que o componente filho remonte se os dados mudarem
     await nextTick();
     chartKey.value++;
   } catch (error) {
@@ -62,55 +62,63 @@ const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i);
 </script>
 
 <template>
-  <div class="p-6 max-w-7xl mx-auto min-h-screen">
+  <div class="p-4 md:p-6 max-w-7xl mx-auto min-h-screen">
     
-    <div class="flex justify-between items-center mb-10">
-      <h2 class="text-3xl font-black text-slate-800 tracking-tight italic">
-        Dashboard: <span class="text-blue-600">{{ months[selectedMonth - 1]?.label }}</span>
-      </h2>
-      <div class="flex gap-3 bg-white p-2.5 rounded-2xl shadow-sm border border-slate-100 items-center">
-        <select v-model="selectedMonth" class="bg-transparent text-sm font-bold px-3 outline-none border-none focus:ring-0 cursor-pointer">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 md:mb-10">
+      <div class="w-full md:w-auto">
+        <h2 class="text-2xl md:text-3xl font-black text-slate-800 italic uppercase tracking-tighter leading-tight">
+          Dashboard
+        </h2>
+        <p class="text-slate-400 text-[9px] font-black uppercase tracking-[0.2em]">
+          {{ months[selectedMonth - 1]?.label }} {{ selectedYear }}
+        </p>
+      </div>
+
+      <div class="flex h-11 md:h-14 gap-1 bg-white p-1.5 rounded-xl md:rounded-2xl shadow-sm border border-slate-100 w-full md:w-auto">
+        <select v-model="selectedMonth" class="bg-transparent text-[10px] md:text-xs font-black outline-none w-full text-center appearance-none cursor-pointer">
           <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
         </select>
-        <div class="w-px bg-slate-200 h-6"></div>
-        <select v-model="selectedYear" class="bg-transparent text-sm font-bold px-3 outline-none border-none focus:ring-0 cursor-pointer">
+        <div class="w-[1px] h-4 bg-slate-100 self-center"></div>
+        <select v-model="selectedYear" class="bg-transparent text-[10px] md:text-xs font-black outline-none px-2 appearance-none text-center cursor-pointer">
           <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
         </select>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-      <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-white flex flex-col items-center">
-        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Entradas</span>
-        <h3 class="text-3xl font-black text-emerald-500">R$ {{ (summary.totalIncome || 0).toFixed(2) }}</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10">
+      <div class="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] shadow-xl border border-white flex flex-col items-center">
+        <span class="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 md:mb-2">Entradas</span>
+        <h3 class="text-2xl md:text-3xl font-black text-emerald-500">R$ {{ (summary.totalIncome || 0).toFixed(2) }}</h3>
       </div>
 
-      <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-white flex flex-col items-center">
-        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Saídas</span>
-        <h3 class="text-3xl font-black text-rose-500">R$ {{ (summary.totalExpense || 0).toFixed(2) }}</h3>
+      <div class="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] shadow-xl border border-white flex flex-col items-center">
+        <span class="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 md:mb-2">Saídas</span>
+        <h3 class="text-2xl md:text-3xl font-black text-rose-500">R$ {{ (summary.totalExpense || 0).toFixed(2) }}</h3>
       </div>
 
-      <div class="bg-white p-8 rounded-[2.5rem] shadow-xl border border-white flex flex-col items-center">
-        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Saldo</span>
-        <h3 :class="summary.balance >= 0 ? 'text-blue-600' : 'text-rose-600'" class="text-3xl font-black">
+      <div class="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] shadow-xl border border-white flex flex-col items-center">
+        <span class="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 md:mb-2">Saldo</span>
+        <h3 :class="summary.balance >= 0 ? 'text-blue-600' : 'text-rose-600'" class="text-2xl md:text-3xl font-black">
           R$ {{ (summary.balance || 0).toFixed(2) }}
         </h3>
       </div>
     </div>
 
-    <div class="bg-white p-12 rounded-[3.5rem] shadow-xl border border-white flex flex-col items-center">
-      <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-10 text-center">Distribuição de Gastos</h3>
+    <div class="bg-white p-6 md:p-12 rounded-[2rem] md:rounded-[3.5rem] shadow-xl border border-white flex flex-col items-center">
+      <h3 class="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest mb-6 md:mb-10 text-center italic">
+        Distribuição de Gastos
+      </h3>
       
-      <div class="w-full max-w-lg">
+      <div class="w-full" :class="isMobile ? 'max-w-[280px]' : 'max-w-lg'">
         <DoughnutChart 
           v-if="expensesByCategory.length > 0" 
           :key="chartKey"
           :chartData="chartData" 
         />
-        <div v-else-if="!loading" class="text-center py-20 text-slate-300 italic">
+        <div v-else-if="!loading" class="text-center py-10 md:py-20 text-slate-300 italic text-sm">
           Nenhum registro encontrado para este período.
         </div>
-        <div v-else class="text-center py-20">
+        <div v-else class="text-center py-10 md:py-20">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
         </div>
       </div>
