@@ -37,7 +37,16 @@ const initialForm = {
 const transactionForm = ref({ ...initialForm });
 
 // --- LÓGICA DE DADOS ---
-async function fetchData() {
+async function fetchCategories() {
+  try {
+    const responseCategories = await api.get('/categories');
+    categories.value = responseCategories.data || [];
+  } catch (e) {
+    console.error("Erro ao carregar categorias:", e);
+  }
+}
+
+async function fetchTransactions() {
   loading.value = true;
   try {
     const params = {
@@ -47,34 +56,38 @@ async function fetchData() {
       size: pageSize.value,
       sort: 'date,desc'
     };
-    const [resTrans, resCats] = await Promise.all([
-      api.get('/transactions', { params }),
-      api.get('/categories')
-    ]);
 
-    // Mapeamento dos dados
-    transactions.value = resTrans.data.content || [];
-    totalElements.value = Number(resTrans.data.totalElements) || 0;
-    totalPages.value = Number(resTrans.data.totalPages) || 0;
-    categories.value = resCats.data || [];
+    const responseTransactions = await api.get('/transactions', { params });
+
+    // TRANSACTIONS
+    const data = responseTransactions.data || {};
+    transactions.value = data.content || [];
+
+    // PAGINATION
+    const page = data.page || {};
+    totalElements.value = Number(page.totalElements) || 0;
+    totalPages.value = Number(page.totalPages) || 0;
   } catch (e) {
-    console.error("Erro ao carregar dados:", e);
+    console.error("Erro ao carregar transações:", e);
   } finally {
     loading.value = false;
   }
 }
 
-// Watchers
+// WATCHERS
+watch([selectedMonth, selectedYear, pageSize, currentPage], () => {
+  fetchTransactions();
+});
+
 watch([selectedMonth, selectedYear, pageSize], () => {
   currentPage.value = 0;
-  fetchData();
 });
-watch(currentPage, fetchData);
+
 watch(isMobile, (newVal) => {
   pageSize.value = newVal ? 1000 : 10;
 }, { immediate: true });
 
-// --- AÇÕES ---
+// ACTION(EDIT, DELETE, SAVE)
 function openCreate() {
   isEditing.value = false;
   transactionForm.value = { ...initialForm };
@@ -97,7 +110,7 @@ async function handleSave(payload) {
       await api.post('/transactions', payload);
     }
     showFormModal.value = false;
-    fetchData();
+    fetchTransactions();
   } catch (error) {
     apiErrorMessage.value = error.response?.data?.message || "Erro no servidor.";
   }
@@ -114,13 +127,16 @@ async function confirmDelete() {
     await api.delete(`/transactions/${transactionToDelete.value.id}`);
     showConfirmModal.value = false;
     transactionToDelete.value = null;
-    fetchData();
+    fetchTransactions();
   } catch (e) {
     console.error(e);
   }
 }
 
-onMounted(fetchData);
+onMounted(async () => {
+  await fetchCategories();
+  await fetchTransactions();
+});
 
 const months = [
   { value: 1, label: 'Janeiro' }, { value: 2, label: 'Fevereiro' }, { value: 3, label: 'Março' },
@@ -137,31 +153,57 @@ const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-10">
       <div class="w-full md:w-auto text-left">
         <h2 class="text-2xl md:text-3xl font-black text-slate-800 italic uppercase tracking-tighter leading-tight">
-          Transações</h2>
-        <p class="text-slate-400 text-[9px] font-black uppercase tracking-[0.2em]">{{ months[selectedMonth - 1].label }}
-          {{ selectedYear }}</p>
+          Transações
+        </h2>
+        <p class="text-slate-400 text-[9px] font-black uppercase tracking-[0.2em]">
+          {{ months[selectedMonth - 1].label }} {{ selectedYear }}
+        </p>
       </div>
 
       <div class="flex flex-wrap items-center gap-2 w-full md:w-auto h-auto md:h-14">
 
+        <!-- PAGINAÇÃO + INFO (mais compacto, mais “produto”) -->
         <div v-if="!isMobile"
-          class="flex items-center bg-white p-1 rounded-xl md:rounded-2xl border border-slate-100 shadow-sm h-full">
+          class="flex items-center bg-white px-3 py-2 md:py-0 rounded-xl md:rounded-2xl border border-slate-100 shadow-sm h-11 md:h-full">
 
-          <button @click="currentPage--" :disabled="currentPage === 0"
-            class="px-4 py-2 text-blue-600 disabled:text-slate-200 disabled:opacity-50 hover:scale-110 transition-all active:scale-95">
-            <font-awesome-icon icon="arrow-left" class="text-lg md:text-xl" />
-          </button>
+          <!-- Info -->
+          <div class="flex items-baseline gap-2 pr-3">
+            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+              {{ totalElements }} registros
+            </span>
+            <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest">
+              •
+            </span>
+            <span class="text-[9px] font-black text-blue-600 uppercase tracking-widest">
+              Página {{ totalPages ? (currentPage + 1) : 0 }}/{{ totalPages || 0 }}
+            </span>
+          </div>
 
           <div class="w-[1px] h-6 bg-slate-100"></div>
 
-          <button @click="currentPage++" :disabled="transactions.length < pageSize"
-            class="px-4 py-2 text-blue-600 disabled:text-slate-200 disabled:opacity-50 hover:scale-110 transition-all active:scale-95">
-            <font-awesome-icon icon="arrow-right" class="text-lg md:text-xl" />
-          </button>
+          <!-- Controles -->
+          <div class="flex items-center pl-2">
+            <button
+              @click="currentPage--"
+              :disabled="currentPage === 0 || totalPages === 0"
+              class="px-3 py-2 text-blue-600 disabled:text-slate-200 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed hover:scale-110 transition-all active:scale-95">
+              <font-awesome-icon icon="arrow-left" class="text-lg md:text-xl" />
+            </button>
+
+            <div class="w-[1px] h-6 bg-slate-100"></div>
+
+            <button
+              @click="currentPage++"
+              :disabled="currentPage >= totalPages - 1 || totalPages === 0"
+              class="px-3 py-2 text-blue-600 disabled:text-slate-200 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed hover:scale-110 transition-all active:scale-95">
+              <font-awesome-icon icon="arrow-right" class="text-lg md:text-xl" />
+            </button>
+          </div>
         </div>
 
+        <!-- EXIBIR -->
         <div v-if="!isMobile"
-          class="flex items-center bg-white px-4 py-1.5 md:py-0 rounded-xl md:rounded-2xl border border-slate-100 shadow-sm h-full">
+          class="flex items-center bg-white px-4 py-1.5 md:py-0 rounded-xl md:rounded-2xl border border-slate-100 shadow-sm h-11 md:h-full">
           <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest mr-2">EXIBIR:</span>
           <select v-model="pageSize"
             class="bg-transparent text-[10px] md:text-xs font-black outline-none cursor-pointer text-blue-600 appearance-none min-w-[30px] text-center">
@@ -173,6 +215,7 @@ const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
           </select>
         </div>
 
+        <!-- MÊS/ANO -->
         <div
           class="flex h-11 md:h-full gap-1 bg-white p-1.5 rounded-xl md:rounded-2xl shadow-sm border border-slate-100 flex-grow md:flex-grow-0 min-w-[140px]">
           <select v-model="selectedMonth"
@@ -186,6 +229,7 @@ const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
           </select>
         </div>
 
+        <!-- NOVO -->
         <button @click="openCreate"
           class="h-11 md:h-full bg-blue-600 text-white px-6 rounded-xl md:rounded-[1.5rem] font-black shadow-lg shadow-blue-100 active:scale-95 transition-all text-[10px] md:text-xs uppercase flex items-center gap-2 flex-grow md:flex-grow-0">
           <font-awesome-icon icon="plus" />

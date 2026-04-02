@@ -15,10 +15,47 @@ const summary = ref({ totalIncome: 0, totalExpense: 0, balance: 0 });
 const expensesByCategory = ref([]);
 
 const chartData = computed(() => {
+  const dataRaw = expensesByCategory.value.map(c => ({
+    name: c.category,
+    value: Number(c.total) || 0
+  }));
+
+  const totalGeral = dataRaw.reduce((acc, curr) => acc + curr.value, 0);
+
+  if (totalGeral === 0) {
+    return { labels: [], datasets: [] };
+  }
+
+  // 1. Calcular percentuais com base decimal e truncar a parte inteira
+  const valuesWithDecimals = dataRaw.map(item => {
+    const percentage = (item.value / totalGeral) * 100;
+    return {
+      ...item,
+      percentage,
+      integerPart: Math.floor(percentage),
+      decimalPart: percentage - Math.floor(percentage)
+    };
+  });
+
+  // 2. Calcular a diferença para 100
+  const sumIntegers = valuesWithDecimals.reduce((acc, curr) => acc + curr.integerPart, 0);
+  let difference = 100 - sumIntegers;
+
+  // 3. Ordenar pelos maiores restos decimais e distribuir a diferença
+  const sortedByDecimals = [...valuesWithDecimals].sort((a, b) => b.decimalPart - a.decimalPart);
+  
+  for (let i = 0; i < difference; i++) {
+    sortedByDecimals[i].integerPart += 1;
+  }
+
+  // 4. Montar os labels finais garantindo soma 100%
   return {
-    labels: expensesByCategory.value.map(c => c.category),
+    labels: valuesWithDecimals.map(item => {
+      const valorFormatado = item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      return `${item.name}: R$ ${valorFormatado} (${item.integerPart}%)`;
+    }),
     datasets: [{
-      data: expensesByCategory.value.map(c => Number(c.total) || 0),
+      data: valuesWithDecimals.map(item => item.value),
       backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'],
       borderWidth: 0,
       hoverOffset: 15
@@ -63,7 +100,6 @@ const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i);
 
 <template>
   <div class="p-4 md:p-6 max-w-7xl mx-auto min-h-screen">
-    
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 md:mb-10">
       <div class="w-full md:w-auto">
         <h2 class="text-2xl md:text-3xl font-black text-slate-800 italic uppercase tracking-tighter leading-tight">
@@ -109,7 +145,7 @@ const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i);
         Distribuição de Gastos
       </h3>
       
-      <div class="w-full" :class="isMobile ? 'max-w-[280px]' : 'max-w-lg'">
+      <div class="w-full" :class="isMobile ? 'max-w-full' : 'max-w-2xl'">
         <DoughnutChart 
           v-if="expensesByCategory.length > 0" 
           :key="chartKey"
