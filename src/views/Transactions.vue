@@ -124,7 +124,11 @@ function openDeleteConfirm(t) {
 async function confirmDelete() {
   if (!transactionToDelete.value) return;
   try {
-    await api.delete(`/transactions/${transactionToDelete.value.id}`);
+    // Se for transação recorrente (tem groupId), deleta apenas a partir dela
+    const endpoint = transactionToDelete.value.groupId
+      ? `/transactions/${transactionToDelete.value.id}/recurrent-forward`
+      : `/transactions/${transactionToDelete.value.id}`;
+    await api.delete(endpoint);
     showConfirmModal.value = false;
     transactionToDelete.value = null;
     fetchTransactions();
@@ -183,18 +187,14 @@ const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
 
           <!-- Controles -->
           <div class="flex items-center pl-2">
-            <button
-              @click="currentPage--"
-              :disabled="currentPage === 0 || totalPages === 0"
+            <button @click="currentPage--" :disabled="currentPage === 0 || totalPages === 0"
               class="px-3 py-2 text-blue-600 disabled:text-slate-200 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed hover:scale-110 transition-all active:scale-95">
               <font-awesome-icon icon="arrow-left" class="text-lg md:text-xl" />
             </button>
 
             <div class="w-[1px] h-6 bg-slate-100"></div>
 
-            <button
-              @click="currentPage++"
-              :disabled="currentPage >= totalPages - 1 || totalPages === 0"
+            <button @click="currentPage++" :disabled="currentPage >= totalPages - 1 || totalPages === 0"
               class="px-3 py-2 text-blue-600 disabled:text-slate-200 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed hover:scale-110 transition-all active:scale-95">
               <font-awesome-icon icon="arrow-right" class="text-lg md:text-xl" />
             </button>
