@@ -8,41 +8,43 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 // 2. Importação de todos os ícones que usamos (Solid)
-import { 
-  faPlus, 
-  faRepeat, 
-  faPenToSquare, 
-  faTrashCan, 
-  faXmark, 
-  faCheck, 
-  faChevronDown, 
+import {
+  faPlus,
+  faRepeat,
+  faPenToSquare,
+  faTrashCan,
+  faXmark,
+  faCheck,
+  faChevronDown,
   faTriangleExclamation,
-  faCircleCheck, 
-  faCircleExclamation, 
+  faCircleCheck,
+  faCircleExclamation,
   faSpinner,
-  faArrowLeft, 
+  faArrowLeft,
   faArrowRight,
   faChevronLeft,
-  faChevronRight
+  faChevronRight,
+  faFilePdf
 } from '@fortawesome/free-solid-svg-icons'
 
 // 3. Adicionando à biblioteca global
 library.add(
-  faPlus, 
-  faRepeat, 
-  faPenToSquare, 
-  faTrashCan, 
-  faXmark, 
-  faCheck, 
-  faChevronDown, 
+  faPlus,
+  faRepeat,
+  faPenToSquare,
+  faTrashCan,
+  faXmark,
+  faCheck,
+  faChevronDown,
   faTriangleExclamation,
-  faCircleCheck, 
-  faCircleExclamation, 
+  faCircleCheck,
+  faCircleExclamation,
   faSpinner,
-  faArrowLeft, 
+  faArrowLeft,
   faArrowRight,
   faChevronLeft,
-  faChevronRight
+  faChevronRight,
+  faFilePdf
 )
 
 const app = createApp(App)

@@ -26,7 +26,6 @@ const chartData = computed(() => {
     return { labels: [], datasets: [] };
   }
 
-  // 1. Calcular percentuais com base decimal e truncar a parte inteira
   const valuesWithDecimals = dataRaw.map(item => {
     const percentage = (item.value / totalGeral) * 100;
     return {
@@ -37,18 +36,15 @@ const chartData = computed(() => {
     };
   });
 
-  // 2. Calcular a diferença para 100
   const sumIntegers = valuesWithDecimals.reduce((acc, curr) => acc + curr.integerPart, 0);
   let difference = 100 - sumIntegers;
 
-  // 3. Ordenar pelos maiores restos decimais e distribuir a diferença
   const sortedByDecimals = [...valuesWithDecimals].sort((a, b) => b.decimalPart - a.decimalPart);
-  
+
   for (let i = 0; i < difference; i++) {
     sortedByDecimals[i].integerPart += 1;
   }
 
-  // 4. Montar os labels finais garantindo soma 100%
   return {
     labels: valuesWithDecimals.map(item => {
       const valorFormatado = item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
@@ -74,7 +70,7 @@ async function fetchData() {
 
     summary.value = resSummary.data;
     expensesByCategory.value = resExpenses.data || [];
-    
+
     await nextTick();
     chartKey.value++;
   } catch (error) {
@@ -100,61 +96,62 @@ const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i);
 
 <template>
   <div class="p-4 md:p-6 max-w-7xl mx-auto min-h-screen">
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 md:mb-10">
+
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-8">
       <div class="w-full md:w-auto">
-        <h2 class="text-2xl md:text-3xl font-black text-slate-800 italic uppercase tracking-tighter leading-tight">
+        <h2 class="text-2xl md:text-3xl font-bold text-slate-800 italic uppercase tracking-tighter leading-tight">
           Dashboard
         </h2>
-        <p class="text-slate-400 text-[9px] font-black uppercase tracking-[0.2em]">
+        <p class="text-slate-400 text-xs font-medium mt-1">
           {{ months[selectedMonth - 1]?.label }} {{ selectedYear }}
         </p>
       </div>
 
-      <div class="flex h-11 md:h-14 gap-1 bg-white p-1.5 rounded-xl md:rounded-2xl shadow-sm border border-slate-100 w-full md:w-auto">
-        <select v-model="selectedMonth" class="bg-transparent text-[10px] md:text-xs font-black outline-none w-full text-center appearance-none cursor-pointer">
+      <div class="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg shadow-sm border border-slate-100 h-9">
+        <select v-model="selectedMonth" class="bg-transparent text-sm font-medium outline-none w-20 text-center appearance-none cursor-pointer">
           <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
         </select>
-        <div class="w-[1px] h-4 bg-slate-100 self-center"></div>
-        <select v-model="selectedYear" class="bg-transparent text-[10px] md:text-xs font-black outline-none px-2 appearance-none text-center cursor-pointer">
+        <div class="w-px h-4 bg-slate-200"></div>
+        <select v-model="selectedYear" class="bg-transparent text-sm font-medium outline-none text-center appearance-none w-14 cursor-pointer">
           <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
         </select>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10">
-      <div class="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] shadow-xl border border-white flex flex-col items-center">
-        <span class="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 md:mb-2">Entradas</span>
-        <h3 class="text-2xl md:text-3xl font-black text-emerald-500">R$ {{ (summary.totalIncome || 0).toFixed(2) }}</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
+      <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center">
+        <span class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Entradas</span>
+        <h3 class="text-2xl md:text-3xl font-bold text-emerald-500">R$ {{ (summary.totalIncome || 0).toFixed(2) }}</h3>
       </div>
 
-      <div class="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] shadow-xl border border-white flex flex-col items-center">
-        <span class="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 md:mb-2">Saídas</span>
-        <h3 class="text-2xl md:text-3xl font-black text-rose-500">R$ {{ (summary.totalExpense || 0).toFixed(2) }}</h3>
+      <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center">
+        <span class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Saídas</span>
+        <h3 class="text-2xl md:text-3xl font-bold text-rose-500">R$ {{ (summary.totalExpense || 0).toFixed(2) }}</h3>
       </div>
 
-      <div class="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] shadow-xl border border-white flex flex-col items-center">
-        <span class="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 md:mb-2">Saldo</span>
-        <h3 :class="summary.balance >= 0 ? 'text-blue-600' : 'text-rose-600'" class="text-2xl md:text-3xl font-black">
+      <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center">
+        <span class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Saldo</span>
+        <h3 :class="summary.balance >= 0 ? 'text-blue-600' : 'text-rose-600'" class="text-2xl md:text-3xl font-bold">
           R$ {{ (summary.balance || 0).toFixed(2) }}
         </h3>
       </div>
     </div>
 
-    <div class="bg-white p-6 md:p-12 rounded-[2rem] md:rounded-[3.5rem] shadow-xl border border-white flex flex-col items-center">
-      <h3 class="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest mb-6 md:mb-10 text-center italic">
+    <div class="bg-white p-5 md:p-8 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center">
+      <h3 class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-6 text-center italic">
         Distribuição de Gastos
       </h3>
-      
-      <div class="w-full" :class="isMobile ? 'max-w-full' : 'max-w-2xl'">
-        <DoughnutChart 
-          v-if="expensesByCategory.length > 0" 
+
+      <div class="w-full" :class="isMobile ? 'max-w-full' : 'max-w-xl'">
+        <DoughnutChart
+          v-if="expensesByCategory.length > 0"
           :key="chartKey"
-          :chartData="chartData" 
+          :chartData="chartData"
         />
-        <div v-else-if="!loading" class="text-center py-10 md:py-20 text-slate-300 italic text-sm">
+        <div v-else-if="!loading" class="text-center py-12 text-slate-300 italic text-sm">
           Nenhum registro encontrado para este período.
         </div>
-        <div v-else class="text-center py-10 md:py-20">
+        <div v-else class="text-center py-12">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
         </div>
       </div>

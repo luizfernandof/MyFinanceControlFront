@@ -1,9 +1,11 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import ReportsModal from './ReportsModal.vue';
 
 const router = useRouter();
-const isMenuOpen = ref(false); // Controle do menu mobile pelo Vue
+const isMenuOpen = ref(false);
+const showReportsModal = ref(false);
 
 function handleLogout() {
   localStorage.removeItem('accessToken');
@@ -11,7 +13,6 @@ function handleLogout() {
   router.push('/');
 }
 
-// Função para fechar o menu ao clicar em um link (mobile)
 const closeMenu = () => {
   isMenuOpen.value = false;
 };
@@ -28,21 +29,25 @@ const closeMenu = () => {
           </router-link>
           
           <div class="hidden md:flex space-x-2">
-            <router-link to="/dashboard" 
+            <router-link to="/dashboard"
               class="text-blue-100 hover:text-white hover:bg-blue-700 px-4 py-2 rounded-xl text-sm font-bold transition-all"
               active-class="bg-blue-800 text-white shadow-inner">
               Dashboard
             </router-link>
-            <router-link to="/transactions" 
+            <router-link to="/transactions"
               class="text-blue-100 hover:text-white hover:bg-blue-700 px-4 py-2 rounded-xl text-sm font-bold transition-all"
               active-class="bg-blue-800 text-white shadow-inner">
               Transações
             </router-link>
-            <router-link to="/categories" 
+            <router-link to="/categories"
               class="text-blue-100 hover:text-white hover:bg-blue-700 px-4 py-2 rounded-xl text-sm font-bold transition-all"
               active-class="bg-blue-800 text-white shadow-inner">
               Categorias
             </router-link>
+            <button @click="showReportsModal = true"
+              class="text-blue-100 hover:text-white hover:bg-blue-700 px-4 py-2 rounded-xl text-sm font-bold transition-all">
+              Relatórios
+            </button>
           </div>
         </div>
 
@@ -51,9 +56,9 @@ const closeMenu = () => {
             class="text-white border border-blue-400 hover:bg-blue-500 px-4 py-2 rounded-xl text-sm font-bold transition-all">
             Meu Perfil
           </router-link>
-          <button @click="handleLogout" 
-            class="bg-rose-500 hover:bg-rose-600 text-white px-5 py-2 rounded-xl text-sm font-black shadow-md active:scale-95 transition-all">
-            SAIR
+          <button @click="handleLogout"
+            class="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-xl text-sm font-semibold active:scale-95 transition-all">
+            Sair
           </button>
         </div>
 
@@ -74,10 +79,16 @@ const closeMenu = () => {
         <router-link @click="closeMenu" to="/transactions" class="block text-white px-4 py-3 rounded-xl text-base font-bold hover:bg-blue-800">Transações</router-link>
         <router-link @click="closeMenu" to="/categories" class="block text-white px-4 py-3 rounded-xl text-base font-bold hover:bg-blue-800">Categorias</router-link>
         <div class="border-t border-blue-600 my-2"></div>
+        <button @click="showReportsModal = true; closeMenu()" class="w-full text-left text-blue-200 px-4 py-3 rounded-xl text-base font-bold hover:bg-blue-800 flex items-center gap-2">
+          <font-awesome-icon icon="fa-solid fa-file-pdf" />
+          Relatórios
+        </button>
         <router-link @click="closeMenu" to="/profile" class="block text-white px-4 py-3 rounded-xl text-base font-bold hover:bg-blue-800">Meu Perfil</router-link>
         <button @click="handleLogout" class="w-full text-left text-rose-300 px-4 py-3 rounded-xl text-base font-bold hover:bg-blue-800">Sair</button>
       </div>
     </div>
+
+    <ReportsModal :show="showReportsModal" @close="showReportsModal = false" />
   </nav>
 </template>
 
