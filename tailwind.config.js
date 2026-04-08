@@ -5,9 +5,11 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Poppins', 'system-ui', 'sans-serif'],
+      },
       colors: {
-        // MFC Brand Colors
-        primary: '#3b82f6', // Um azul moderno que substitui o do Bootstrap
+        primary: '#3b82f6',
       }
     },
   },

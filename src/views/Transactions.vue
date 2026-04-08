@@ -17,6 +17,15 @@ const categories = ref([]);
 const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
 
+// ORDENAÇÃO
+const selectedSort = ref('date,desc');
+const sortOptions = [
+  { value: 'date,desc', label: 'Data (recente)' },
+  { value: 'date,asc', label: 'Data (antiga)' },
+  { value: 'amount,asc', label: 'Valor (menor)' },
+  { value: 'amount,desc', label: 'Valor (maior)' }
+];
+
 // PAGINAÇÃO
 const currentPage = ref(0);
 const pageSize = ref(10);
@@ -54,7 +63,7 @@ async function fetchTransactions() {
       year: selectedYear.value,
       page: currentPage.value,
       size: pageSize.value,
-      sort: 'date,desc'
+      sort: selectedSort.value
     };
 
     const responseTransactions = await api.get('/transactions', { params });
@@ -75,11 +84,11 @@ async function fetchTransactions() {
 }
 
 // WATCHERS
-watch([selectedMonth, selectedYear, pageSize, currentPage], () => {
+watch([selectedMonth, selectedYear, pageSize, currentPage, selectedSort], () => {
   fetchTransactions();
 });
 
-watch([selectedMonth, selectedYear, pageSize], () => {
+watch([selectedMonth, selectedYear, pageSize, selectedSort], () => {
   currentPage.value = 0;
 });
 
@@ -164,49 +173,30 @@ const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
         </p>
       </div>
 
-      <div class="flex flex-wrap items-center gap-2 w-full md:w-auto h-auto md:h-14">
+      <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
 
-        <!-- PAGINAÇÃO + INFO (mais compacto, mais “produto”) -->
+        <!-- PAGINAÇÃO (setas) -->
         <div v-if="!isMobile"
-          class="flex items-center bg-white px-3 py-2 md:py-0 rounded-xl md:rounded-2xl border border-slate-100 shadow-sm h-11 md:h-full">
-
-          <!-- Info -->
-          <div class="flex items-baseline gap-2 pr-3">
-            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-              {{ totalElements }} registros
-            </span>
-            <span class="text-[9px] font-black text-slate-300 uppercase tracking-widest">
-              •
-            </span>
-            <span class="text-[9px] font-black text-blue-600 uppercase tracking-widest">
-              Página {{ totalPages ? (currentPage + 1) : 0 }}/{{ totalPages || 0 }}
-            </span>
-          </div>
-
-          <div class="w-[1px] h-6 bg-slate-100"></div>
-
-          <!-- Controles -->
-          <div class="flex items-center pl-2">
-            <button @click="currentPage--" :disabled="currentPage === 0 || totalPages === 0"
-              class="px-3 py-2 text-blue-600 disabled:text-slate-200 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed hover:scale-110 transition-all active:scale-95">
-              <font-awesome-icon icon="arrow-left" class="text-lg md:text-xl" />
-            </button>
-
-            <div class="w-[1px] h-6 bg-slate-100"></div>
-
-            <button @click="currentPage++" :disabled="currentPage >= totalPages - 1 || totalPages === 0"
-              class="px-3 py-2 text-blue-600 disabled:text-slate-200 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed hover:scale-110 transition-all active:scale-95">
-              <font-awesome-icon icon="arrow-right" class="text-lg md:text-xl" />
-            </button>
-          </div>
+          class="flex items-center bg-white px-3 py-1 rounded-lg border border-slate-100 shadow-sm h-9">
+          <button @click="currentPage--" :disabled="currentPage === 0 || totalPages === 0"
+            class="px-2 text-blue-600 disabled:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 transition-all active:scale-95">
+            <font-awesome-icon icon="arrow-left" class="text-sm" />
+          </button>
+          <span class="text-xs font-medium text-slate-500 mx-2 whitespace-nowrap">
+            {{ totalPages ? (currentPage + 1) : 0 }}/{{ totalPages || 0 }}
+          </span>
+          <button @click="currentPage++" :disabled="currentPage >= totalPages - 1 || totalPages === 0"
+            class="px-2 text-blue-600 disabled:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 transition-all active:scale-95">
+            <font-awesome-icon icon="arrow-right" class="text-sm" />
+          </button>
         </div>
 
         <!-- EXIBIR -->
         <div v-if="!isMobile"
-          class="flex items-center bg-white px-4 py-1.5 md:py-0 rounded-xl md:rounded-2xl border border-slate-100 shadow-sm h-11 md:h-full">
-          <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest mr-2">EXIBIR:</span>
+          class="flex items-center bg-white px-3 py-1 rounded-lg border border-slate-100 shadow-sm h-9">
+          <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mr-2">Exibir</span>
           <select v-model="pageSize"
-            class="bg-transparent text-[10px] md:text-xs font-black outline-none cursor-pointer text-blue-600 appearance-none min-w-[30px] text-center">
+            class="bg-transparent text-sm font-medium outline-none cursor-pointer text-blue-600 appearance-none w-10 text-center">
             <option :value="5">05</option>
             <option :value="10">10</option>
             <option :value="15">15</option>
@@ -215,26 +205,40 @@ const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
           </select>
         </div>
 
+        <!-- ORDENAR -->
+        <div v-if="!isMobile"
+          class="flex items-center bg-white px-3 py-1 rounded-lg border border-slate-100 shadow-sm h-9">
+          <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mr-2">Ordenar</span>
+          <select v-model="selectedSort"
+            class="bg-transparent text-sm font-medium outline-none cursor-pointer text-blue-600 appearance-none w-28">
+            <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+        </div>
+
         <!-- MÊS/ANO -->
-        <div
-          class="flex h-11 md:h-full gap-1 bg-white p-1.5 rounded-xl md:rounded-2xl shadow-sm border border-slate-100 flex-grow md:flex-grow-0 min-w-[140px]">
+        <div class="flex items-center gap-1 bg-white px-3 py-1 rounded-lg shadow-sm border border-slate-100 h-9">
           <select v-model="selectedMonth"
-            class="bg-transparent text-[10px] md:text-xs font-black outline-none w-full text-center appearance-none cursor-pointer">
+            class="bg-transparent text-sm font-medium outline-none w-20 text-center appearance-none cursor-pointer">
             <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
           </select>
-          <div class="w-[1px] h-4 bg-slate-100 self-center"></div>
+          <div class="w-px h-4 bg-slate-200"></div>
           <select v-model="selectedYear"
-            class="bg-transparent text-[10px] md:text-xs font-black outline-none text-center appearance-none px-2 cursor-pointer">
+            class="bg-transparent text-sm font-medium outline-none text-center appearance-none w-14 cursor-pointer">
             <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
           </select>
         </div>
 
         <!-- NOVO -->
         <button @click="openCreate"
-          class="h-11 md:h-full bg-blue-600 text-white px-6 rounded-xl md:rounded-[1.5rem] font-black shadow-lg shadow-blue-100 active:scale-95 transition-all text-[10px] md:text-xs uppercase flex items-center gap-2 flex-grow md:flex-grow-0">
-          <font-awesome-icon icon="plus" />
-          <span>NOVO</span>
+          class="bg-blue-600 text-white px-4 py-1 rounded-lg font-semibold shadow-sm active:scale-95 transition-all text-xs uppercase flex items-center gap-1.5 h-9">
+          <font-awesome-icon icon="plus" class="text-sm" />
+          <span>Novo</span>
         </button>
+
+        <!-- Total registros (mobile) -->
+        <span v-if="isMobile" class="text-xs font-medium text-slate-400 self-center ml-2">
+          {{ totalElements }} registros
+        </span>
       </div>
     </div>
 
